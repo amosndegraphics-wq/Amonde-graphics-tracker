@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amosnde Graphics Profit Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f6f9;
+            color: #333;
+            position: relative;
+            min-height: 90vh;
+        }
+
+        /* Access Lock Screen */
+        #accessLockOverlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: #2c3e50;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .lock-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 350px;
+            width: 90%;
+        }
+        .lock-card input {
+            width: 100%;
+            padding: 10px;
+            margin: 15px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .lock-card button {
+            width: 100%;
+            padding: 10px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* App Container Hidden by Default */
+        #appContainer {
+            display: none;
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        .header-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .header-container h2 {
+            margin: 0;
+            color: #2c3e50;
+            text-align: left;
+        }
+        .site-logo {
+            max-height: 50px;
+            width: auto;
+            object-fit: contain;
+        }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #219653; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #ecf0f1; }
+        .summary-box {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f8f5;
+            border-left: 5px solid #2cc990;
+            border-radius: 4px;
+            display: none;
+            text-align: center;
+        }
+        .summary-box h3 { margin: 0; color: #27ae60; }
+        .summary-btn { background-color: #2980b9; margin-top: 15px; }
+        .summary-btn:hover { background-color: #2471a3; }
+
+        .bg-log-link {
+            position: fixed;
+            bottom: 15px;
+            right: 20px;
+            color: #bdc3c7;
+            text-decoration: none;
+            font-size: 13px;
+            cursor: pointer;
+            user-select: none;
+            display: none;
+        }
+        .bg-log-link:hover { color: #7f8c8d; text-decoration: underline; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 85%;
+            max-width: 850px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .close-btn {
+            position: absolute; right: 15px; top: 10px;
+            font-size: 24px; cursor: pointer; color: #7f8c8d;
+        }
+        .modal-header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px; margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .day-log-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px; margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .day-log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold; font-size: 16px; color: #2c3e50;
+            margin-bottom: 10px; border-bottom: 2px solid #2980b9;
+            padding-bottom: 8px;
+        }
+        .date-title-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        
+        .day-totals-banner {
+            margin-top: 15px;
+            padding: 12px;
+            background-color: #2c3e50;
+            color: #ffffff;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .day-totals-banner .net-profit {
+            background-color: #27ae60;
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: #ffffff;
+            font-size: 15px;
+        }
+
+        .monthly-summary-card {
+            display: none;
+            background: #2980b9;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+        }
+        .monthly-summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .monthly-select {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: none;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .monthly-stats-grid {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 15px;
+        }
+
+        .btn-monthly-toggle {
+            background-color: #2980b9; color: white; border: none;
+            padding: 8px 14px; border-radius: 4px; font-size: 13px;
+            cursor: pointer; font-weight: bold; width: auto;
+        }
+        .btn-monthly-toggle:hover { background-color: #1f618d; }
+
+        .btn-edit-date {
+            background-color: #f39c12; color: white; border: none;
+            padding: 4px 8px; border-radius: 4px; font-size: 12px;
+            cursor: pointer; font-weight: bold; width: auto;
+        }
+        .btn-edit-date:hover { background-color: #d68910; }
+
+        .btn-delete-all {
+            background-color: #c0392b; color: white; border: none;
+            padding: 8px 14px; border-radius: 4px; font-size: 13px;
+            cursor: pointer; font-weight: bold; width: auto;
+        }
+        .btn-delete-all:hover { background-color: #922b21; }
+
+        .btn-delete-item {
+            background-color: #e74c3c; color: white; border: none;
+            padding: 3px 8px; border-radius: 3px; font-size: 11px;
+            cursor: pointer; font-weight: bold; width: auto;
+        }
+        .btn-delete-item:hover { background-color: #c0392b; }
+
+        .status-badge {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: #e0e0e0;
+            color: #555;
+            font-weight: bold;
+        }
+        .status-online { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+
+<!-- Access Lock Screen -->
+<div id="accessLockOverlay">
+    <div class="lock-card">
+        <h3 style="margin-top: 0; color: #2c3e50;">🔒 Password Required</h3>
+        <p style="font-size: 14px; color: #666;">Enter password to access Amosnde Graphics Profit Tracker:</p>
+        <input type="password" id="sitePasswordInput" placeholder="Password">
+        <button onclick="checkAccessPassword()">Unlock Tracker</button>
+    </div>
+</div>
+
+<!-- Main Tracker UI -->
+<div class="container" id="appContainer">
+    <div class="header-container">
+        <img src="https://amosndegraphics.com/wp-content/uploads/2022/05/cropped-cropped-my-logo.png" alt="Amosnde Graphics Logo" class="site-logo">
+        <h2>Amosnde Graphics Profit Tracker</h2>
+        <span id="syncStatus" class="status-badge">Connecting Cloud...</span>
+    </div>
+    
+    <div class="form-group">
+        <label for="projectName">Project / Design Name</label>
+        <input type="text" id="projectName" placeholder="e.g., Logo Design / Business Cards">
+    </div>
+    
+    <div class="form-group">
+        <label for="moneyCharged">Money Charged (KSh)</label>
+        <input type="number" id="moneyCharged" placeholder="Total client bill">
+    </div>
+    
+    <div class="form-group">
+        <label for="moneyUsed">Money Used (KSh)</label>
+        <input type="number" id="moneyUsed" placeholder="Printing + Expenses">
+    </div>
+    
+    <button onclick="addProject()">Log Graphics Job</button>
+
+    <table id="projectsTable">
+        <thead>
+            <tr>
+                <th>Project</th>
+                <th>Charged</th>
+                <th>Expenses</th>
+                <th>Profit</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <button class="summary-btn" onclick="showDailySummary()">Check Full Day Profit Made</button>
+
+    <div class="summary-box" id="summaryBox">
+        <h3>💰 Total Profit Made Today: <span id="totalProfitText">KSh 0</span></h3>
+    </div>
+</div>
+
+<a class="bg-log-link" id="viewLogsLink" onclick="openLogsModal()">View Logs</a>
+
+<div id="logsModal" class="modal">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeLogsModal()">&times;</span>
+        <div class="modal-header-actions">
+            <h2 style="margin:0;">📁 Cloud Payment Logs</h2>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn-monthly-toggle" onclick="toggleMonthlyCard()">📊 Check Monthly Profit Total</button>
+                <button class="btn-delete-all" onclick="deleteAllCloudLogs()">🗑️ Delete All Logs</button>
+            </div>
+        </div>
+
+        <div id="monthlySummaryCard" class="monthly-summary-card">
+            <div class="monthly-summary-header">
+                <span>🗓️ End-of-Month Total Profit Breakdown</span>
+                <select id="monthFilterSelect" class="monthly-select" onchange="calculateMonthlyTotal()"></select>
+            </div>
+            <div class="monthly-stats-grid">
+                <div>Total Charged: <strong id="mTotalCharged">KSh 0</strong></div>
+                <div>Total Expenses: <strong id="mTotalUsed">KSh 0</strong></div>
+                <div>Net Profit: <strong id="mTotalProfit" style="color: #2ecc71; font-size: 17px;">KSh 0</strong></div>
+            </div>
+        </div>
+
+        <div id="logsContainer"></div>
+    </div>
+</div>
+
+<!-- Firebase Modular SDK Setup -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { 
+        getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc 
+    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAs3OaETY-b0A9P1CpFGDIsnQwL2x6Doc0",
+        authDomain: "amosnde-profit-tracker.firebaseapp.com",
+        projectId: "amosnde-profit-tracker",
+        storageBucket: "amosnde-profit-tracker.firebasestorage.app",
+        messagingSenderId: "134687766067",
+        appId: "1:134687766067:web:aa1b63bc26574a14c45546",
+        measurementId: "G-WM63S4PFR6"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+
+    const MASTER_PASSWORD = "Aa068930";
+    let globalCloudLogs = [];
+    let sessionProjects = [];
+
+    // Clear old saved trust token if present
+    localStorage.removeItem('amosnde_trusted_device');
+
+    function unlockInterface() {
+        document.getElementById('accessLockOverlay').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'block';
+        document.getElementById('viewLogsLink').style.display = 'block';
+    }
+
+    // Main page password prompt
+    window.checkAccessPassword = function() {
+        const inputPass = document.getElementById('sitePasswordInput').value;
+        if (inputPass === MASTER_PASSWORD) {
+            unlockInterface();
+            document.getElementById('sitePasswordInput').value = '';
+        } else {
+            alert("Incorrect password. Access denied.");
+        }
+    };
+
+    document.getElementById('sitePasswordInput').addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            window.checkAccessPassword();
+        }
+    });
+
+    function getTodayDateString() {
+        const today = new Date();
+        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    }
+
+    // Real-time Cloud Firestore Listener
+    const q = query(collection(db, "graphics_jobs"), orderBy("timestamp", "desc"));
+    onSnapshot(q, (snapshot) => {
+        globalCloudLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        document.getElementById('syncStatus').innerText = "☁️ Cloud Synced";
+        document.getElementById('syncStatus').classList.add('status-online');
+        
+        if (document.getElementById('logsModal').style.display === 'block') {
+            renderLogsView();
+            calculateMonthlyTotal();
+        }
+    }, (error) => {
+        console.error("Firebase Sync Error: ", error);
+        document.getElementById('syncStatus').innerText = "❌ Sync Failed";
+    });
+
+    window.addProject = async function() {
+        const project = document.getElementById('projectName').value.trim();
+        const charged = parseFloat(document.getElementById('moneyCharged').value) || 0;
+        const used = parseFloat(document.getElementById('moneyUsed').value) || 0;
+
+        if (!project || charged === 0) {
+            alert("Please fill out the Project/Design Name and Money Charged field.");
+            return;
+        }
+
+        const profit = charged - used;
+        const dateStr = getTodayDateString();
+
+        const jobData = {
+            project,
+            charged,
+            used,
+            profit,
+            date: dateStr,
+            time: new Date().toLocaleTimeString(),
+            timestamp: Date.now()
+        };
+
+        try {
+            await addDoc(collection(db, "graphics_jobs"), jobData);
+
+            sessionProjects.unshift(jobData);
+            renderSessionTable();
+
+            document.getElementById('projectName').value = '';
+            document.getElementById('moneyCharged').value = '';
+            document.getElementById('moneyUsed').value = '';
+        } catch (e) {
+            alert("Error saving log to cloud: " + e.message);
+        }
+    };
+
+    function renderSessionTable() {
+        const tableBody = document.getElementById('projectsTable').getElementsByTagName('tbody')[0];
+        tableBody.innerHTML = '';
+
+        sessionProjects.forEach(item => {
+            const newRow = tableBody.insertRow();
+            newRow.innerHTML = `
+                <td><strong>${item.project}</strong></td>
+                <td>KSh ${item.charged.toLocaleString()}</td>
+                <td>KSh ${item.used.toLocaleString()}</td>
+                <td style="color: ${item.profit >= 0 ? '#27ae60' : '#c0392b'}; font-weight: bold;">
+                    KSh ${item.profit.toLocaleString()}
+                </td>
+            `;
+        });
+    }
+
+    window.showDailySummary = function() {
+        const todayStr = getTodayDateString();
+        const todayItems = globalCloudLogs.filter(item => item.date === todayStr);
+        const total = todayItems.reduce((acc, curr) => acc + curr.profit, 0);
+        
+        document.getElementById('totalProfitText').innerText = "KSh " + total.toLocaleString();
+        document.getElementById('summaryBox').style.display = 'block';
+    };
+
+    // Always ask password on View Logs click
+    window.openLogsModal = function() {
+        const pass = prompt("Enter Password to View Logs:");
+        if (pass === MASTER_PASSWORD) {
+            populateMonthDropdown();
+            renderLogsView();
+            document.getElementById('monthlySummaryCard').style.display = 'none';
+            document.getElementById('logsModal').style.display = 'block';
+        } else {
+            alert("Incorrect password. Access to logs denied.");
+        }
+    };
+
+    window.closeLogsModal = function() {
+        document.getElementById('logsModal').style.display = 'none';
+    };
+
+    window.toggleMonthlyCard = function() {
+        const card = document.getElementById('monthlySummaryCard');
+        if (card.style.display === 'block') {
+            card.style.display = 'none';
+        } else {
+            calculateMonthlyTotal();
+            card.style.display = 'block';
+        }
+    };
+
+    function populateMonthDropdown() {
+        const select = document.getElementById('monthFilterSelect');
+        select.innerHTML = '<option value="ALL">All Saved Months</option>';
+
+        const monthsSet = new Set();
+        globalCloudLogs.forEach(item => {
+            if (item.date && item.date.length >= 7) {
+                monthsSet.add(item.date.substring(0, 7));
+            }
+        });
+
+        Array.from(monthsSet).sort().reverse().forEach(monthKey => {
+            const dateObj = new Date(monthKey + "-01");
+            const monthName = dateObj.toLocaleString('default', { month: 'long', year: 'numeric' });
+            select.innerHTML += `<option value="${monthKey}">${monthName}</option>`;
+        });
+    }
+
+    window.calculateMonthlyTotal = function() {
+        const selectedMonth = document.getElementById('monthFilterSelect').value;
+        let totalCharged = 0, totalUsed = 0, totalProfit = 0;
+
+        globalCloudLogs.forEach(item => {
+            if (selectedMonth === 'ALL' || item.date.startsWith(selectedMonth)) {
+                totalCharged += item.charged || 0;
+                totalUsed += item.used || 0;
+                totalProfit += item.profit || 0;
+            }
+        });
+
+        document.getElementById('mTotalCharged').innerText = "KSh " + totalCharged.toLocaleString();
+        document.getElementById('mTotalUsed').innerText = "KSh " + totalUsed.toLocaleString();
+        document.getElementById('mTotalProfit').innerText = "KSh " + totalProfit.toLocaleString();
+    };
+
+    function renderLogsView() {
+        const container = document.getElementById('logsContainer');
+        container.innerHTML = '';
+
+        if (globalCloudLogs.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color: #7f8c8d;">No payment logs in cloud database.</p>';
+            return;
+        }
+
+        const grouped = {};
+        globalCloudLogs.forEach(item => {
+            if (!grouped[item.date]) grouped[item.date] = [];
+            grouped[item.date].push(item);
+        });
+
+        const sortedDates = Object.keys(grouped).sort().reverse();
+
+        sortedDates.forEach(date => {
+            const dayEntries = grouped[date];
+            let dayCharged = 0, dayUsed = 0, dayProfit = 0;
+
+            let tableHtml = `
+                <div class="day-log-card">
+                    <div class="day-log-header">
+                        <div class="date-title-group">
+                            <span>📅 Date: ${date}</span>
+                            <button class="btn-edit-date" onclick="editDateGroup('${date}', ${JSON.stringify(dayEntries.map(e => e.id)).replace(/"/g, '&quot;')})">✏️ Edit Date</button>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr><th>Project</th><th>Charged</th><th>Expenses</th><th>Profit</th><th style="width: 70px; text-align:center;">Action</th></tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            dayEntries.forEach(entry => {
+                dayCharged += entry.charged;
+                dayUsed += entry.used;
+                dayProfit += entry.profit;
+                tableHtml += `
+                    <tr>
+                        <td>${entry.project}</td>
+                        <td>KSh ${entry.charged.toLocaleString()}</td>
+                        <td>KSh ${entry.used.toLocaleString()}</td>
+                        <td style="color: ${entry.profit >= 0 ? '#27ae60' : '#c0392b'}; font-weight: bold;">
+                            KSh ${entry.profit.toLocaleString()}
+                        </td>
+                        <td style="text-align:center;">
+                            <button class="btn-delete-item" onclick="deleteCloudItem('${entry.id}')">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `
+                        </tbody>
+                    </table>
+                    <div class="day-totals-banner">
+                        <span>Charged: KSh ${dayCharged.toLocaleString()}</span>
+                        <span>Expenses: KSh ${dayUsed.toLocaleString()}</span>
+                        <span class="net-profit">Total Net Profit (${date}): KSh ${dayProfit.toLocaleString()}</span>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += tableHtml;
+        });
+    }
+
+    window.editDateGroup = async function(currentDate, idsArray) {
+        const newDate = prompt(`Enter new date for all entries on ${currentDate} (YYYY-MM-DD format):`, currentDate);
+        if (newDate && newDate.trim() !== "" && newDate !== currentDate) {
+            try {
+                for (let id of idsArray) {
+                    await updateDoc(doc(db, "graphics_jobs", id), { date: newDate.trim() });
+                }
+            } catch (e) {
+                alert("Error updating date: " + e.message);
+            }
+        }
+    };
+
+    window.deleteCloudItem = async function(id) {
+        if (confirm("Are you sure you want to delete this log entry permanently from the cloud?")) {
+            try {
+                await deleteDoc(doc(db, "graphics_jobs", id));
+            } catch (e) {
+                alert("Could not delete item: " + e.message);
+            }
+        }
+    };
+
+    window.deleteAllCloudLogs = async function() {
+        if (confirm("⚠️ WARNING: This will permanently delete ALL logs from your cloud database! Are you absolutely sure?")) {
+            const pass = prompt("Re-enter Master Password to confirm deletion of ALL logs:");
+            if (pass === MASTER_PASSWORD) {
+                try {
+                    for (let item of globalCloudLogs) {
+                        await deleteDoc(doc(db, "graphics_jobs", item.id));
+                    }
+                    alert("All logs have been wiped from Cloud Firestore.");
+                } catch (e) {
+                    alert("Error deleting logs: " + e.message);
+                }
+            } else {
+                alert("Incorrect password. Deletion cancelled.");
+            }
+        }
+    };
+</script>
+
+</body>
+</html>
