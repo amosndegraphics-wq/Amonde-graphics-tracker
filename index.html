@@ -71,7 +71,7 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .header-container h2 {
             margin: 0;
@@ -83,6 +83,41 @@
             width: auto;
             object-fit: contain;
         }
+
+        /* Date Navigation Bar */
+        .date-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #eef2f5;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #dcdfe3;
+        }
+        .date-display {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+        .btn-date-nav {
+            background-color: #2980b9;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            width: auto;
+        }
+        .btn-date-nav:hover {
+            background-color: #1f618d;
+        }
+
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input {
@@ -282,7 +317,7 @@
 <div id="accessLockOverlay">
     <div class="lock-card">
         <h3 style="margin-top: 0; color: #2c3e50;">🔒 Password Required</h3>
-        <p style="font-size: 14px; color: #666;">Enter password to access Amosnde Graphics Profit Tracker:</p>
+        <p style="font-size: 14px; color: #666;">Enter password to access the site (You must be Collins):</p>
         <input type="password" id="sitePasswordInput" placeholder="Password">
         <button onclick="checkAccessPassword()">Unlock Tracker</button>
     </div>
@@ -294,6 +329,13 @@
         <img src="https://amosndegraphics.com/wp-content/uploads/2022/05/cropped-cropped-my-logo.png" alt="Amosnde Graphics Logo" class="site-logo">
         <h2>Amosnde Graphics Profit Tracker</h2>
         <span id="syncStatus" class="status-badge">Connecting Cloud...</span>
+    </div>
+
+    <!-- Active Date Display & Navigation Controls -->
+    <div class="date-bar">
+        <button class="btn-date-nav" onclick="changeDay(-1)">◀️ Prev Day</button>
+        <span class="date-display" id="activeDateDisplay">📅 Active Date: Loading...</span>
+        <button class="btn-date-nav" onclick="changeDay(1)">Next Day ⏭️</button>
     </div>
     
     <div class="form-group">
@@ -325,10 +367,10 @@
         <tbody></tbody>
     </table>
 
-    <button class="summary-btn" onclick="showDailySummary()">Check Full Day Profit Made</button>
+    <button class="summary-btn" id="checkDailyProfitBtn" onclick="showDailySummary()">Check Profit Made for Selected Date</button>
 
     <div class="summary-box" id="summaryBox">
-        <h3>💰 Total Profit Made Today: <span id="totalProfitText">KSh 0</span></h3>
+        <h3>💰 Total Profit (<span id="summaryDateLabel"></span>): <span id="totalProfitText">KSh 0</span></h3>
     </div>
 </div>
 
@@ -386,9 +428,61 @@
     const MASTER_PASSWORD = "Aa068930";
     let globalCloudLogs = [];
     let sessionProjects = [];
+    let activeDateStr = "";
 
-    // Clear old saved trust token if present
     localStorage.removeItem('amosnde_trusted_device');
+
+    function formatDateToString(d) {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function initActiveDate() {
+        const todayStr = formatDateToString(new Date());
+        const savedDate = localStorage.getItem('amosnde_active_date');
+
+        if (!savedDate || savedDate < todayStr) {
+            activeDateStr = todayStr;
+            localStorage.setItem('amosnde_active_date', todayStr);
+        } else {
+            activeDateStr = savedDate;
+        }
+
+        updateDateUI();
+    }
+
+    function updateDateUI() {
+        document.getElementById('activeDateDisplay').innerText = `📅 Active Date: ${activeDateStr}`;
+        document.getElementById('checkDailyProfitBtn').innerText = `Check Full Profit Made (${activeDateStr})`;
+    }
+
+    window.changeDay = function(offsetDays) {
+        const [year, month, day] = activeDateStr.split('-').map(Number);
+        const currentDate = new Date(year, month - 1, day);
+        
+        currentDate.setDate(currentDate.getDate() + offsetDays);
+
+        // Sunday Check (getDay() === 0 means Sunday)
+        if (currentDate.getDay() === 0) {
+            if (offsetDays > 0) {
+                // Moving forward: Jump from Sunday to Monday (+1 day)
+                currentDate.setDate(currentDate.getDate() + 1);
+            } else {
+                // Moving backward: Jump from Sunday to Saturday (-1 day)
+                currentDate.setDate(currentDate.getDate() - 1);
+            }
+        }
+
+        activeDateStr = formatDateToString(currentDate);
+        localStorage.setItem('amosnde_active_date', activeDateStr);
+        
+        sessionProjects = [];
+        renderSessionTable();
+        document.getElementById('summaryBox').style.display = 'none';
+        
+        updateDateUI();
+    };
+
+    initActiveDate();
 
     function unlockInterface() {
         document.getElementById('accessLockOverlay').style.display = 'none';
@@ -396,7 +490,6 @@
         document.getElementById('viewLogsLink').style.display = 'block';
     }
 
-    // Main page password prompt
     window.checkAccessPassword = function() {
         const inputPass = document.getElementById('sitePasswordInput').value;
         if (inputPass === MASTER_PASSWORD) {
@@ -413,12 +506,6 @@
         }
     });
 
-    function getTodayDateString() {
-        const today = new Date();
-        return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    }
-
-    // Real-time Cloud Firestore Listener
     const q = query(collection(db, "graphics_jobs"), orderBy("timestamp", "desc"));
     onSnapshot(q, (snapshot) => {
         globalCloudLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -446,14 +533,13 @@
         }
 
         const profit = charged - used;
-        const dateStr = getTodayDateString();
 
         const jobData = {
             project,
             charged,
             used,
             profit,
-            date: dateStr,
+            date: activeDateStr,
             time: new Date().toLocaleTimeString(),
             timestamp: Date.now()
         };
@@ -490,15 +576,14 @@
     }
 
     window.showDailySummary = function() {
-        const todayStr = getTodayDateString();
-        const todayItems = globalCloudLogs.filter(item => item.date === todayStr);
-        const total = todayItems.reduce((acc, curr) => acc + curr.profit, 0);
+        const dateSpecificItems = globalCloudLogs.filter(item => item.date === activeDateStr);
+        const total = dateSpecificItems.reduce((acc, curr) => acc + curr.profit, 0);
         
+        document.getElementById('summaryDateLabel').innerText = activeDateStr;
         document.getElementById('totalProfitText').innerText = "KSh " + total.toLocaleString();
         document.getElementById('summaryBox').style.display = 'block';
     };
 
-    // Always ask password on View Logs click
     window.openLogsModal = function() {
         const pass = prompt("Enter Password to View Logs:");
         if (pass === MASTER_PASSWORD) {
